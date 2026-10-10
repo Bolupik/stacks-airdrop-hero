@@ -1,0 +1,10 @@
+# Geschenk roadmap
+
+- [x] Airdrop wizard: token → recipients (CSV/paste/holder snapshot) → review → send in batches
+- [x] Testnet/mainnet toggle
+- [x] Batch helper contract (deploy from wallet, max 200 per tx, atomic, post-conditions)
+- [x] Local airdrop history with live tx status
+- [ ] NFT (SIP-009) holder snapshots
+- [ ] Recipient airdrop checker
+- [ ] Claim page (pull airdrop via Merkle proofs)
+- [ ] Shared on-chain history (needs Cloud)
