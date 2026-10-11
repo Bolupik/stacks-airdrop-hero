@@ -1,3 +1,4 @@
+import { loadConnect } from "@/lib/connect";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
@@ -423,7 +424,7 @@ function SendStep({ net, sender, token, rows, onBack }: { net: Net; sender: stri
   async function deploy() {
     setErr("");
     try {
-      const { request } = await import("@stacks/connect");
+      const { request } = await loadConnect();
       const res = await request("stx_deployContract", {
         name: CONTRACT_NAME,
         clarityCode: airdropContractSource(net),
@@ -476,7 +477,7 @@ function SendStep({ net, sender, token, rows, onBack }: { net: Net; sender: stri
       const chunk = chunks[i]!;
       const total = chunk.reduce((a, r) => a + r.amount, 0n);
       const [tAddr = "", tName = ""] = token.contractId.split(".");
-      const { request } = await import("@stacks/connect");
+      const { request } = await loadConnect();
       const res = await request("stx_callContract", {
         contract: contract as `${string}.${string}`,
         functionName: "airdrop",
