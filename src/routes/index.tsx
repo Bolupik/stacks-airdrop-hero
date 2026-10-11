@@ -36,7 +36,7 @@ export const Route = createFileRoute("/")({
 
 type Row = { address: string; amount: bigint };
 type Bad = { line: number; raw: string; reason: string };
-type BatchState = { status: "idle" | "signing" | "sent" | "error"; txid?: string; error?: string };
+type BatchState = { status: "idle" | "signing" | "sent" | "error"; txid?: string | undefined; error?: string | undefined };
 
 const STEPS = ["Token", "Recipients", "Review", "Send"];
 
@@ -185,15 +185,15 @@ function parseList(text: string, decimals: number, net: Net, fixed?: string): { 
   const map = new Map<string, bigint>();
   const bad: Bad[] = [];
   parsed.data.forEach((cells, i) => {
-    const c = cells.flatMap((x) => x.split(/\s+/)).map((x) => x.trim()).filter(Boolean);
+    const c: string[] = cells.flatMap((x) => x.split(/\s+/)).map((x) => x.trim()).filter(Boolean);
     if (!c.length) return;
-    const addr = c[0];
+    const addr = c[0]!;
     if (i === 0 && !/^S[A-Z0-9]/i.test(addr)) return; // header row
-    if (!isAddressForNet(addr, net)) return bad.push({ line: i + 1, raw: cells.join(","), reason: `Not a valid ${net} address` });
+    if (!isAddressForNet(addr, net)) { bad.push({ line: i + 1, raw: cells.join(","), reason: `Not a valid ${net} address` }); return; }
     const amtStr = fixed ?? c[1];
-    if (!amtStr) return bad.push({ line: i + 1, raw: cells.join(","), reason: "Missing amount" });
+    if (!amtStr) { bad.push({ line: i + 1, raw: cells.join(","), reason: "Missing amount" }); return; }
     const amt = toBase(amtStr, decimals);
-    if (amt === null || amt <= 0n) return bad.push({ line: i + 1, raw: cells.join(","), reason: "Invalid amount" });
+    if (amt === null || amt <= 0n) { bad.push({ line: i + 1, raw: cells.join(","), reason: "Invalid amount" }); return; }
     map.set(addr, (map.get(addr) ?? 0n) + amt);
   });
   return { rows: [...map].map(([address, amount]) => ({ address, amount })), bad };
@@ -473,9 +473,9 @@ function SendStep({ net, sender, token, rows, onBack }: { net: Net; sender: stri
       });
     set({ status: "signing" });
     try {
-      const chunk = chunks[i];
+      const chunk = chunks[i]!;
       const total = chunk.reduce((a, r) => a + r.amount, 0n);
-      const [tAddr, tName] = token.contractId.split(".");
+      const [tAddr = "", tName = ""] = token.contractId.split(".");
       const { request } = await import("@stacks/connect");
       const res = await request("stx_callContract", {
         contract: contract as `${string}.${string}`,
@@ -537,7 +537,7 @@ function SendStep({ net, sender, token, rows, onBack }: { net: Net; sender: stri
           <p className="font-mono text-xs text-muted-foreground">{sentCount}/{chunks.length} sent</p>
         </div>
         {chunks.map((ch, i) => {
-          const s = states[i];
+          const s = states[i] ?? { status: "idle" as const };
           const total = ch.reduce((a, r) => a + r.amount, 0n);
           return (
             <div key={i} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3">

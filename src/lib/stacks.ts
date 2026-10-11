@@ -84,8 +84,8 @@ export type TokenInfo = {
   name: string;
   symbol: string;
   decimals: number;
-  image?: string;
-  balance?: bigint;
+  image?: string | undefined;
+  balance?: bigint | undefined;
 };
 
 export async function fetchWalletTokens(net: Net, address: string): Promise<TokenInfo[]> {
@@ -96,12 +96,12 @@ export async function fetchWalletTokens(net: Net, address: string): Promise<Toke
   const entries = Object.entries(data.fungible_tokens ?? {}).filter(([, v]) => BigInt(v.balance) > 0n);
   return Promise.all(
     entries.map(async ([key, v]) => {
-      const [contractId, assetName] = key.split("::");
+      const [contractId = "", assetName = ""] = key.split("::");
       const meta = await fetchTokenMeta(net, contractId).catch(() => null);
       return {
         contractId,
         assetName,
-        name: meta?.name ?? contractId.split(".")[1],
+        name: meta?.name ?? contractId.split(".")[1] ?? contractId,
         symbol: meta?.symbol ?? assetName.toUpperCase(),
         decimals: meta?.decimals ?? 6,
         image: meta?.image,
@@ -120,7 +120,7 @@ async function fetchTokenMeta(net: Net, contractId: string) {
 }
 
 export async function fetchTokenByContract(net: Net, contractId: string, holder?: string): Promise<TokenInfo> {
-  const [addr, name] = contractId.split(".");
+  const [addr = "", name = ""] = contractId.split(".");
   const iface = await hiro<{ fungible_tokens: { name: string }[] }>(net, `/v2/contracts/interface/${addr}/${name}`);
   const assetName = iface.fungible_tokens?.[0]?.name;
   if (!assetName) throw new Error("That contract doesn't define a fungible token.");
@@ -172,7 +172,7 @@ export async function fetchTxStatus(net: Net, txid: string): Promise<string> {
 }
 
 export async function contractExists(net: Net, contractId: string) {
-  const [a, n] = contractId.split(".");
+  const [a = "", n = ""] = contractId.split(".");
   const r = await fetch(`${HIRO[net]}/v2/contracts/interface/${a}/${n}`);
   return r.ok;
 }
@@ -186,7 +186,7 @@ export type Campaign = {
   token: { contractId: string; symbol: string; decimals: number };
   recipients: number;
   total: string; // base units
-  batches: { txid?: string; size: number; total: string }[];
+  batches: { txid?: string | undefined; size: number; total: string }[];
 };
 
 const KEY = "geschenk:campaigns";
