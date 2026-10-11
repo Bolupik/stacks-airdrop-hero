@@ -1,3 +1,4 @@
+import { loadConnect } from "@/lib/connect";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Net } from "./stacks";
 
@@ -25,7 +26,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem("geschenk:net");
     if (saved === "mainnet" || saved === "testnet") setNetState(saved);
-    import("@stacks/connect").then(({ getLocalStorage }) => {
+    loadConnect().then(({ getLocalStorage }) => {
       const d = getLocalStorage();
       if (d?.addresses?.stx?.length) setAddresses(d.addresses.stx.map((a) => a.address));
     });
@@ -37,13 +38,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connect = useCallback(async () => {
-    const { connect } = await import("@stacks/connect");
+    const { connect } = await loadConnect();
     const res = await connect();
     setAddresses(res.addresses.filter((a) => /^S[PMTN]/.test(a.address)).map((a) => a.address));
   }, []);
 
   const disconnect = useCallback(async () => {
-    const { disconnect } = await import("@stacks/connect");
+    const { disconnect } = await loadConnect();
     disconnect();
     setAddresses([]);
   }, []);
