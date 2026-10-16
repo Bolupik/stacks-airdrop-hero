@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import { Cl, Pc } from "@stacks/transactions";
 import { useWallet } from "@/lib/wallet";
+import { detectCsvColumns } from "@/lib/csv-ai.functions";
 import {
   BATCH_SIZE,
   CONTRACT_NAME,
@@ -237,8 +238,42 @@ function RecipientsStep({
   const [progress, setProgress] = useState("");
   const [err, setErr] = useState("");
 
-  function onFile(f: File) {
-    f.text().then(setText);
+  const [csv, setCsv] = useState<{ name: string; rows: string[][]; addr: number; amt: number | null; header: boolean; note: string } | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+
+  async function onFile(f: File) {
+    setErr("");
+    if (f.size > 5_000_000) return setErr("File is too large (max 5 MB).");
+    const raw = await f.text();
+    const rows = Papa.parse<string[]>(raw.trim(), { skipEmptyLines: true }).data.filter((r) => r.some((c) => c.trim()));
+    if (!rows.length) return setErr("That file is empty.");
+    const width = Math.max(...rows.map((r) => r.length));
+    if (width < 2) { setText(raw); return; } // plain address list — no columns to detect
+    setAiBusy(true);
+    setCsv(null);
+    try {
+      const sample = rows.slice(0, 10).map((r) => r.slice(0, 30).map((c) => c.slice(0, 200)));
+      const res = await detectCsvColumns({ data: { sample } });
+      if (!res.ok) { setErr(res.error); setCsv({ name: f.name, rows, addr: 0, amt: 1, header: false, note: "Pick the columns yourself." }); return; }
+      const g = res.guess;
+      const ok = (i: number | null) => i === null || (i >= 0 && i < width);
+      setCsv({ name: f.name, rows, addr: ok(g.addressColumn) ? g.addressColumn : 0, amt: ok(g.amountColumn) ? g.amountColumn : null, header: g.hasHeader, note: g.note });
+    } catch {
+      setErr("Couldn't reach the AI reader. Pick the columns yourself.");
+      setCsv({ name: f.name, rows, addr: 0, amt: 1, header: false, note: "" });
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  function applyCsv() {
+    if (!csv) return;
+    const body = (csv.header ? csv.rows.slice(1) : csv.rows)
+      .map((r) => `${(r[csv.addr] ?? "").trim()}${csv.amt !== null ? "," + (r[csv.amt] ?? "").trim().replace(/,/g, "") : ""}`)
+      .join("\n");
+    setText(body);
+    if (csv.amt === null) setUseFixed(true);
+    setCsv(null);
   }
 
   function continueList() {
@@ -294,8 +329,53 @@ function RecipientsStep({
         <div className="space-y-4">
           <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground hover:border-primary">
             <input type="file" accept=".csv,.txt" className="hidden" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
-            Upload a CSV — <span className="ml-1 font-mono">address,amount</span>
+            {aiBusy ? "Reading your file with AI…" : <>Upload any CSV — AI finds the address and amount columns</>}
           </label>
+          {csv && (() => {
+            const width = Math.max(...csv.rows.map((r) => r.length));
+            const head = csv.header ? csv.rows[0]! : null;
+            const label = (i: number) => `Column ${i + 1}${head?.[i] ? ` · ${head[i]}` : ""}`;
+            const preview = (csv.header ? csv.rows.slice(1) : csv.rows).slice(0, 5);
+            return (
+              <div className="space-y-3 rounded-xl border border-primary/60 p-4 text-sm">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-semibold">{csv.name} · {csv.rows.length.toLocaleString()} rows</span>
+                  {csv.note && <span className="text-xs text-muted-foreground">AI: {csv.note}</span>}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="space-y-1"><span className="eyebrow">Address column</span>
+                    <select className="field" value={csv.addr} onChange={(e) => setCsv({ ...csv, addr: Number(e.target.value) })}>
+                      {Array.from({ length: width }, (_, i) => <option key={i} value={i}>{label(i)}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1"><span className="eyebrow">Amount column</span>
+                    <select className="field" value={csv.amt ?? -1} onChange={(e) => setCsv({ ...csv, amt: Number(e.target.value) < 0 ? null : Number(e.target.value) })}>
+                      <option value={-1}>None — same amount for all</option>
+                      {Array.from({ length: width }, (_, i) => <option key={i} value={i}>{label(i)}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 self-end pb-2">
+                    <input type="checkbox" className="accent-primary" checked={csv.header} onChange={(e) => setCsv({ ...csv, header: e.target.checked })} />
+                    First row is a header
+                  </label>
+                </div>
+                <table className="w-full font-mono text-xs">
+                  <tbody>
+                    {preview.map((r, i) => (
+                      <tr key={i} className="border-t border-border">
+                        <td className="truncate py-1.5 pr-3">{shortAddr(r[csv.addr] ?? "")}</td>
+                        <td className="py-1.5 text-right">{csv.amt !== null ? r[csv.amt] : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="flex justify-end gap-2">
+                  <button className="btn btn-ghost" onClick={() => setCsv(null)}>Discard</button>
+                  <button className="btn btn-primary" onClick={applyCsv}>Use these columns</button>
+                </div>
+              </div>
+            );
+          })()}
           <textarea
             className="field min-h-48 font-mono text-xs"
             placeholder={`${net === "mainnet" ? "SP" : "ST"}2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7, 100\n${net === "mainnet" ? "SP" : "ST"}1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE, 250.5`}
@@ -338,7 +418,7 @@ function RecipientsStep({
 
       <div className="flex justify-between gap-2">
         <button className="btn btn-ghost" onClick={onBack}>Back</button>
-        <button className="btn btn-primary" disabled={!!progress} onClick={mode === "list" ? continueList : runSnapshot}>
+        <button className="btn btn-primary" disabled={!!progress || aiBusy || !!csv} onClick={mode === "list" ? continueList : runSnapshot}>
           {mode === "list" ? "Review" : "Take snapshot"}
         </button>
       </div>
