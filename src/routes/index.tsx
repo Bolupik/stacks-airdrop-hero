@@ -7,6 +7,12 @@ import { useWallet } from "@/lib/wallet";
 import {
   BATCH_SIZE,
   CONTRACT_NAME,
+  STX_CHUNK,
+  STX_CONTRACT_NAME,
+  TOKEN_CHUNK,
+  fetchStxToken,
+  isStx,
+  stxAirdropContractSource,
   airdropContractSource,
   contractExists,
   explorerTx,
@@ -116,8 +122,11 @@ function TokenStep({ net, address, onPick }: { net: Net; address: string; onPick
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const [stx, setStx] = useState<TokenInfo | null>(null);
   useEffect(() => {
     setTokens(null);
+    setStx(null);
+    fetchStxToken(net, address).then(setStx).catch(() => {});
     fetchWalletTokens(net, address).then(setTokens).catch(() => setTokens([]));
   }, [net, address]);
 
@@ -140,6 +149,18 @@ function TokenStep({ net, address, onPick }: { net: Net; address: string; onPick
         <h2 className="text-2xl">Which token are you giving?</h2>
         <p className="text-sm text-muted-foreground">Tokens in your wallet on {net}.</p>
       </div>
+      <button
+        onClick={() => stx && onPick(stx)}
+        disabled={!stx}
+        className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left transition hover:border-primary"
+      >
+        <div className="grid h-9 w-9 place-items-center rounded-full bg-primary font-mono text-xs text-primary-foreground">STX</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold">Stacks (STX)</div>
+          <div className="text-xs text-muted-foreground">Native coin — no token contract needed</div>
+        </div>
+        <div className="text-right font-mono text-sm">{stx ? fromBase(stx.balance ?? 0n, 6) : "…"} <span className="text-muted-foreground">STX</span></div>
+      </button>
       {tokens === null ? (
         <p className="text-sm text-muted-foreground">Loading your tokens…</p>
       ) : tokens.length === 0 ? (
@@ -181,7 +202,7 @@ function TokenStep({ net, address, onPick }: { net: Net; address: string; onPick
 }
 
 /* ---------------------------------- Step 2 --------------------------------- */
-function parseList(text: string, decimals: number, net: Net, fixed?: string): { rows: Row[]; bad: Bad[] } {
+function parseList(text: string, decimals: number, net: Net, sender: string, fixed?: string): { rows: Row[]; bad: Bad[] } {
   const parsed = Papa.parse<string[]>(text.trim(), { skipEmptyLines: true, delimiter: "" });
   const map = new Map<string, bigint>();
   const bad: Bad[] = [];
@@ -191,10 +212,12 @@ function parseList(text: string, decimals: number, net: Net, fixed?: string): { 
     const addr = c[0]!;
     if (i === 0 && !/^S[A-Z0-9]/i.test(addr)) return; // header row
     if (!isAddressForNet(addr, net)) { bad.push({ line: i + 1, raw: cells.join(","), reason: `Not a valid ${net} address` }); return; }
+    if (addr === sender) { bad.push({ line: i + 1, raw: cells.join(","), reason: "That's your own wallet" }); return; }
     const amtStr = fixed ?? c[1];
     if (!amtStr) { bad.push({ line: i + 1, raw: cells.join(","), reason: "Missing amount" }); return; }
     const amt = toBase(amtStr, decimals);
-    if (amt === null || amt <= 0n) { bad.push({ line: i + 1, raw: cells.join(","), reason: "Invalid amount" }); return; }
+    if (amt === null || amt <= 0n) { bad.push({ line: i + 1, raw: cells.join(","), reason: amt === null && amtStr.includes(".") && (amtStr.split(".")[1]?.length ?? 0) > decimals ? `Too many decimals (max ${decimals})` : "Invalid amount" }); return; }
+    if (false) { bad.push({ line: i + 1, raw: cells.join(","), reason: "Invalid amount" }); return; }
     map.set(addr, (map.get(addr) ?? 0n) + amt);
   });
   return { rows: [...map].map(([address, amount]) => ({ address, amount })), bad };
@@ -222,7 +245,7 @@ function RecipientsStep({
   function continueList() {
     setErr("");
     if (useFixed && toBase(fixed, token.decimals) === null) return setErr("Enter a valid amount per wallet");
-    const { rows, bad } = parseList(text, token.decimals, net, useFixed ? fixed : undefined);
+    const { rows, bad } = parseList(text, token.decimals, net, sender, useFixed ? fixed : undefined);
     if (!rows.length) return setErr("No valid recipients found.");
     onDone(rows, bad);
   }
@@ -327,8 +350,9 @@ function RecipientsStep({
 /* ---------------------------------- Step 3 --------------------------------- */
 function ReviewStep({ token, rows, bad, onBack, onNext }: { token: TokenInfo; rows: Row[]; bad: Bad[]; onBack: () => void; onNext: () => void }) {
   const total = useMemo(() => rows.reduce((a, r) => a + r.amount, 0n), [rows]);
-  const batches = Math.ceil(rows.length / BATCH_SIZE);
-  const short = token.balance !== undefined && total > token.balance;
+  const batches = Math.ceil(rows.length / (isStx(token) ? STX_CHUNK : TOKEN_CHUNK));
+  const feeReserve = isStx(token) ? BigInt(batches) * 100_000n : 0n; // ~0.1 STX per tx for fees
+  const short = token.balance !== undefined && total + feeReserve > token.balance;
 
   function exportCsv() {
     const csv = "address,amount\n" + rows.map((r) => `${r.address},${fromBase(r.amount, token.decimals).replace(/,/g, "")}`).join("\n");
@@ -353,7 +377,7 @@ function ReviewStep({ token, rows, bad, onBack, onNext }: { token: TokenInfo; ro
           </div>
         ))}
       </div>
-      {short && <p className="rounded-xl border border-destructive/50 p-3 text-sm text-destructive">Your balance is lower than the total. Reduce amounts or top up first.</p>}
+      {short && <p className="rounded-xl border border-destructive/50 p-3 text-sm text-destructive">{isStx(token) ? "Your STX balance doesn't cover the total plus about 0.1 STX per transaction for fees." : "Your balance is lower than the total. Reduce amounts or top up first."}</p>}
       {bad.length > 0 && (
         <details className="panel p-4 text-sm">
           <summary className="cursor-pointer text-accent">{bad.length} line(s) skipped</summary>
@@ -392,7 +416,10 @@ function ReviewStep({ token, rows, bad, onBack, onNext }: { token: TokenInfo; ro
 
 /* ---------------------------------- Step 4 --------------------------------- */
 function SendStep({ net, sender, token, rows, onBack }: { net: Net; sender: string; token: TokenInfo; rows: Row[]; onBack: () => void }) {
-  const storageKey = `geschenk:contract:${net}:${sender}`;
+  const stxMode = isStx(token);
+  const cName = stxMode ? STX_CONTRACT_NAME : CONTRACT_NAME;
+  const chunkSize = stxMode ? STX_CHUNK : TOKEN_CHUNK;
+  const storageKey = `geschenk:contract:${stxMode ? "stx:" : ""}${net}:${sender}`;
   const [contract, setContract] = useState("");
   const [contractState, setContractState] = useState<"checking" | "missing" | "deploying" | "ready">("checking");
   const [deployTx, setDeployTx] = useState("");
@@ -400,14 +427,14 @@ function SendStep({ net, sender, token, rows, onBack }: { net: Net; sender: stri
   const [err, setErr] = useState("");
   const chunks = useMemo(() => {
     const out: Row[][] = [];
-    for (let i = 0; i < rows.length; i += BATCH_SIZE) out.push(rows.slice(i, i + BATCH_SIZE));
+    for (let i = 0; i < rows.length; i += chunkSize) out.push(rows.slice(i, i + chunkSize));
     return out;
-  }, [rows]);
+  }, [rows, chunkSize]);
   const [states, setStates] = useState<BatchState[]>(() => chunks.map(() => ({ status: "idle" })));
   const [campaignId] = useState(() => `${Date.now()}`);
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey) ?? `${sender}.${CONTRACT_NAME}`;
+    const saved = localStorage.getItem(storageKey) ?? `${sender}.${cName}`;
     setContract(saved);
     contractExists(net, saved).then((ok) => setContractState(ok ? "ready" : "missing")).catch(() => setContractState("missing"));
   }, [net, sender, storageKey]);
@@ -426,12 +453,12 @@ function SendStep({ net, sender, token, rows, onBack }: { net: Net; sender: stri
     try {
       const { request } = await loadConnect();
       const res = await request("stx_deployContract", {
-        name: CONTRACT_NAME,
-        clarityCode: airdropContractSource(net),
+        name: cName,
+        clarityCode: stxMode ? stxAirdropContractSource() : airdropContractSource(net),
         clarityVersion: 3,
         network: net,
       });
-      const id = `${sender}.${CONTRACT_NAME}`;
+      const id = `${sender}.${cName}`;
       localStorage.setItem(storageKey, id);
       setContract(id);
       setDeployTx(res.txid ?? "");
@@ -478,15 +505,17 @@ function SendStep({ net, sender, token, rows, onBack }: { net: Net; sender: stri
       const total = chunk.reduce((a, r) => a + r.amount, 0n);
       const [tAddr = "", tName = ""] = token.contractId.split(".");
       const { request } = await loadConnect();
+      const list = Cl.list(chunk.map((r) => Cl.tuple({ to: Cl.principal(r.address), amount: Cl.uint(r.amount) })));
       const res = await request("stx_callContract", {
         contract: contract as `${string}.${string}`,
         functionName: "airdrop",
-        functionArgs: [
-          Cl.contractPrincipal(tAddr, tName),
-          Cl.list(chunk.map((r) => Cl.tuple({ to: Cl.principal(r.address), amount: Cl.uint(r.amount) }))),
-        ],
+        functionArgs: stxMode ? [list] : [Cl.contractPrincipal(tAddr, tName), list],
         network: net,
-        postConditions: [Pc.principal(sender).willSendEq(total).ft(token.contractId as `${string}.${string}`, token.assetName)],
+        postConditions: [
+          stxMode
+            ? Pc.principal(sender).willSendEq(total).ustx()
+            : Pc.principal(sender).willSendEq(total).ft(token.contractId as `${string}.${string}`, token.assetName),
+        ],
         postConditionMode: "deny",
       });
       set({ status: "sent", txid: res.txid });
