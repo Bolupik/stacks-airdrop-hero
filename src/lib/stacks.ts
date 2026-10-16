@@ -12,8 +12,42 @@ export const SIP010_TRAIT: Record<Net, string> = {
   testnet: "ST1NXBK3K5YYMD6FD41MVNP3JS1GABZ8TRVX023PT.sip-010-trait-ft-standard.sip-010-trait",
 };
 
-export const BATCH_SIZE = 200;
+export const BATCH_SIZE = 200; // contract list capacity
+export const TOKEN_CHUNK = 150; // safer default per tx for SIP-010 (runtime cost)
+export const STX_CHUNK = 200;
 export const CONTRACT_NAME = "geschenk-airdrop-v1";
+export const STX_CONTRACT_NAME = "geschenk-stx-airdrop-v1";
+export const STX_ID = "STX";
+export const isStx = (t: { contractId: string }) => t.contractId === STX_ID;
+
+export function stxAirdropContractSource() {
+  return `;; Geschenk STX batch airdrop — up to ${BATCH_SIZE} recipients, atomic.
+(define-private (send-one
+    (r {to: principal, amount: uint})
+    (prior (response bool uint)))
+  (match prior
+    ok-val (stx-transfer? (get amount r) tx-sender (get to r))
+    err-val prior))
+
+(define-public (airdrop (recipients (list ${BATCH_SIZE} {to: principal, amount: uint})))
+  (begin
+    (asserts! (> (len recipients) u0) (err u100))
+    (fold send-one recipients (ok true))))
+`;
+}
+
+export async function fetchStxToken(net: Net, address: string): Promise<TokenInfo> {
+  const r = await fetch(`${HIRO[net]}/extended/v1/address/${address}/stx`);
+  const d = r.ok ? ((await r.json()) as { balance: string; locked: string }) : { balance: "0", locked: "0" };
+  return {
+    contractId: STX_ID,
+    assetName: "stx",
+    name: "Stacks",
+    symbol: "STX",
+    decimals: 6,
+    balance: BigInt(d.balance) - BigInt(d.locked ?? "0"),
+  };
+}
 
 export function airdropContractSource(net: Net) {
   return `;; Geschenk batch airdrop — sends one SIP-010 token to up to ${BATCH_SIZE} recipients.
