@@ -217,7 +217,6 @@ function parseList(text: string, decimals: number, net: Net, sender: string, fix
     if (!amtStr) { bad.push({ line: i + 1, raw: cells.join(","), reason: "Missing amount" }); return; }
     const amt = toBase(amtStr, decimals);
     if (amt === null || amt <= 0n) { bad.push({ line: i + 1, raw: cells.join(","), reason: amt === null && amtStr.includes(".") && (amtStr.split(".")[1]?.length ?? 0) > decimals ? `Too many decimals (max ${decimals})` : "Invalid amount" }); return; }
-    if (false) { bad.push({ line: i + 1, raw: cells.join(","), reason: "Invalid amount" }); return; }
     map.set(addr, (map.get(addr) ?? 0n) + amt);
   });
   return { rows: [...map].map(([address, amount]) => ({ address, amount })), bad };
