@@ -12,7 +12,7 @@ const schema = z.object({
 export type ColumnGuess = z.infer<typeof schema>;
 
 export async function detectColumns(sample: string[][]): Promise<ColumnGuess> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) throw new Error("AI is not configured for this app.");
   const runId = createLovableAiGatewayRunIdFetch();
   const provider = createOpenAI({
