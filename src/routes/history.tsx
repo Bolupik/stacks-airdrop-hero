@@ -9,6 +9,8 @@ export const Route = createFileRoute("/history")({
       { name: "description", content: "Every airdrop you've sent with Geschenk, with live on-chain status per batch." },
       { property: "og:title", content: "Airdrop history — Geschenk" },
       { property: "og:description", content: "Every airdrop you've sent with Geschenk, with live on-chain status per batch." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: HistoryPage,

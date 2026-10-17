@@ -37,6 +37,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Send any SIP-010 token to hundreds of Stacks wallets from a CSV, a pasted list or a holder snapshot." },
       { property: "og:title", content: "Geschenk — Batch airdrop SIP-010 tokens on Stacks" },
       { property: "og:description", content: "Send any SIP-010 token to hundreds of Stacks wallets from a CSV, a pasted list or a holder snapshot." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AirdropWizard,
