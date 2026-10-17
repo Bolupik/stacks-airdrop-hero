@@ -6,7 +6,7 @@
 - [x] Local airdrop history with live tx status
 - [x] STX airdrops, self-send & decimals validation, 150/tx token batches
 - [x] AI-assisted CSV column detection
-- [ ] Separate testnet STX deployment and three-recipient wallet test page
+- [x] Separate testnet STX deployment and three-recipient wallet test page
 - [ ] Real three-person testnet transaction (requires wallet approvals, three testnet recipients and amounts)
 - [ ] NFT (SIP-009) holder snapshots
 - [ ] Recipient airdrop checker

@@ -19,7 +19,9 @@ describe("Three-person testnet STX test", () => {
     expect(validateStxTest(sender, recipients.slice(1), "1").errors.length).toBeGreaterThan(0);
   });
   it("rejects duplicate recipients", () => {
-    expect(validateStxTest(sender, [recipients[0], recipients[0], recipients[2]], "1").errors.length).toBeGreaterThan(0);
+    const first = c32address(26, "02".repeat(20));
+    const third = c32address(26, "04".repeat(20));
+    expect(validateStxTest(sender, [first, first, third], "1").errors.length).toBeGreaterThan(0);
   });
   it("rejects self transfers", () => {
     expect(validateStxTest(sender, [sender, ...recipients.slice(1)], "1").errors.length).toBeGreaterThan(0);
