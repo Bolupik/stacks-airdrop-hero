@@ -17,6 +17,9 @@ export function SiteHeader() {
           <Link to="/history" className="tab" activeProps={{ "data-active": "true" } as never}>
             History
           </Link>
+          <Link to="/stx-test" className="tab" activeProps={{ "data-active": "true" } as never}>
+            STX test
+          </Link>
         </nav>
         <div className="ml-auto flex items-center gap-2">
           {addresses.length ? (
