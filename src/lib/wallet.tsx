@@ -4,7 +4,6 @@ import type { Net } from "./stacks";
 
 type WalletCtx = {
   net: Net;
-  setNet: (n: Net) => void;
   addresses: string[];
   address: string | null; // address matching current network
   connect: () => Promise<void>;
@@ -20,21 +19,15 @@ function pick(addresses: string[], net: Net) {
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [net, setNetState] = useState<Net>("testnet");
+  const net: Net = "mainnet";
   const [addresses, setAddresses] = useState<string[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("geschenk:net");
-    if (saved === "mainnet" || saved === "testnet") setNetState(saved);
+    localStorage.setItem("geschenk:net", "mainnet");
     loadConnect().then(({ getLocalStorage }) => {
       const d = getLocalStorage();
       if (d?.addresses?.stx?.length) setAddresses(d.addresses.stx.map((a) => a.address));
     });
-  }, []);
-
-  const setNet = useCallback((n: Net) => {
-    setNetState(n);
-    localStorage.setItem("geschenk:net", n);
   }, []);
 
   const connect = useCallback(async () => {
@@ -50,7 +43,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ net, setNet, addresses, address: pick(addresses, net), connect, disconnect }}>
+    <Ctx.Provider value={{ net, addresses, address: pick(addresses, net), connect, disconnect }}>
       {children}
     </Ctx.Provider>
   );
