@@ -5,7 +5,7 @@ const PAGE_SIZE = 200;
 export const MAX_NFT_SNAPSHOT = 5000;
 
 async function read<T>(net: Net, path: string): Promise<T> {
-  const response = await fetch(HIRO[net] + path);
+  const response = await fetch(HIRO[net] + path, { signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error(`NFT data unavailable (${response.status}). Please retry shortly.`);
   return response.json() as Promise<T>;
 }
@@ -27,8 +27,8 @@ export async function fetchNftHolders(net: Net, asset: string, onProgress?: (mes
   let offset = 0;
   while (true) {
     const page = await read<{ total: number; results: { value: { hex: string } }[] }>(net, `/extended/v1/tokens/nft/mints?asset_identifier=${encoded}&limit=${PAGE_SIZE}&offset=${offset}`);
-    if (page.total > MAX_NFT_SNAPSHOT) throw new Error(`This asset has more than ${MAX_NFT_SNAPSHOT.toLocaleString()} mint events. Use an externally prepared holder CSV for larger collections; no partial snapshot was imported.`);
     if (!Number.isInteger(page.total) || !Array.isArray(page.results)) throw new Error("NFT mint data was incomplete. No snapshot was imported.");
+    if (page.total > MAX_NFT_SNAPSHOT) throw new Error(`This asset has more than ${MAX_NFT_SNAPSHOT.toLocaleString()} mint events. Use an externally prepared holder CSV for larger collections; no partial snapshot was imported.`);
     for (const entry of page.results) {
       if (!entry.value?.hex) throw new Error("NFT mint data is missing a token ID.");
       ids.add(entry.value.hex);
