@@ -10,9 +10,10 @@ export function validateStxTest(sender: string, recipients: string[], amount: st
   const addresses = recipients.map((address) => address.trim());
   addresses.forEach((address, index) => {
     if (!isAddressForNet(address, TEST_NETWORK)) errors.push(`Recipient ${index + 1}: enter a valid testnet address (ST… or SN…).`);
-    if (address === sender) errors.push(`Recipient ${index + 1}: cannot be your sending wallet.`);
+    if (address && sender && address === sender) errors.push(`Recipient ${index + 1}: cannot be your sending wallet.`);
   });
-  if (new Set(addresses).size !== addresses.length) errors.push("Use three different recipient addresses.");
+  const filled = addresses.filter(Boolean);
+  if (new Set(filled).size !== filled.length) errors.push("Use three different recipient addresses.");
   const base = toBase(amount, 6);
   if (base === null || base <= 0n) errors.push("Enter a positive STX amount with at most six decimal places.");
   return { errors, addresses, amount: base, total: (base ?? 0n) * BigInt(addresses.length) };
