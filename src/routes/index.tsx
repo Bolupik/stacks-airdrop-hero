@@ -5,6 +5,8 @@ import Papa from "papaparse";
 import { Cl, Pc } from "@stacks/transactions";
 import { useWallet } from "@/lib/wallet";
 import { detectCsvColumns } from "@/lib/csv-ai.functions";
+import { NftSnapshotForm } from "@/components/NftSnapshotForm";
+import { Button } from "@/components/ui/button";
 import {
   BATCH_SIZE,
   CONTRACT_NAME,
@@ -228,7 +230,7 @@ function parseList(text: string, decimals: number, net: Net, sender: string, fix
 function RecipientsStep({
   net, sender, token, onBack, onDone,
 }: { net: Net; sender: string; token: TokenInfo; onBack: () => void; onDone: (r: Row[], b: Bad[]) => void }) {
-  const [mode, setMode] = useState<"list" | "snapshot">("list");
+  const [mode, setMode] = useState<"list" | "snapshot" | "nft">("list");
   const [text, setText] = useState("");
   const [useFixed, setUseFixed] = useState(false);
   const [fixed, setFixed] = useState("");
@@ -321,13 +323,14 @@ function RecipientsStep({
           <h2 className="text-2xl">Who receives {token.symbol}?</h2>
           <p className="text-sm text-muted-foreground">Duplicates are merged automatically.</p>
         </div>
-        <div className="flex rounded-full border border-border p-1">
+        <div className="flex flex-wrap gap-1 rounded-lg border border-border p-1">
           <button className="tab" data-active={mode === "list"} onClick={() => setMode("list")}>CSV / list</button>
           <button className="tab" data-active={mode === "snapshot"} onClick={() => setMode("snapshot")}>Holder snapshot</button>
+          <Button variant={mode === "nft" ? "secondary" : "ghost"} size="sm" aria-pressed={mode === "nft"} disabled={!!progress || aiBusy} onClick={() => setMode("nft")}>NFT holders</Button>
         </div>
       </div>
 
-      {mode === "list" ? (
+      {mode === "nft" ? <NftSnapshotForm net={net} sender={sender} token={token} onBack={onBack} onDone={onDone} /> : mode === "list" ? (
         <div className="space-y-4">
           <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground hover:border-primary">
             <input type="file" accept=".csv,.txt" className="hidden" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
@@ -415,15 +418,15 @@ function RecipientsStep({
         </div>
       )}
 
-      {err && <p className="text-sm text-destructive">{err}</p>}
-      {progress && <p className="font-mono text-xs text-accent">{progress}</p>}
+      {mode !== "nft" && err && <p className="text-sm text-destructive">{err}</p>}
+      {mode !== "nft" && progress && <p className="font-mono text-xs text-accent">{progress}</p>}
 
-      <div className="flex justify-between gap-2">
+      {mode !== "nft" && <div className="flex justify-between gap-2">
         <button className="btn btn-ghost" onClick={onBack}>Back</button>
         <button className="btn btn-primary" disabled={!!progress || aiBusy || !!csv} onClick={mode === "list" ? continueList : runSnapshot}>
           {mode === "list" ? "Review" : "Take snapshot"}
         </button>
-      </div>
+      </div>}
     </div>
   );
 }
