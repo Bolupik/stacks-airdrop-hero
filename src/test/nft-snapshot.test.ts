@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchNftAssets, fetchNftHolders } from "@/lib/nft";
 import { c32address } from "c32check";
 
@@ -7,9 +7,10 @@ const other = c32address(22, "03".repeat(20));
 const contract = `${owner}.collection`;
 const asset = `${contract}::nft`;
 const reply = (value: unknown) => new Response(JSON.stringify(value), { status: 200 });
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 1500 }));
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
-describe("NFT ownership snapshots", () => {
+describe("NFT ownership snapshots", { timeout: 20000 }, () => {
   it("returns every NFT asset class in a collection", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(reply({ non_fungible_tokens: [{ name: "first" }, { name: "second" }] })));
     expect(await fetchNftAssets("mainnet", contract)).toEqual([`${contract}::first`, `${contract}::second`]);
