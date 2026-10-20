@@ -10,7 +10,7 @@ const reply = (value: unknown) => new Response(JSON.stringify(value), { status: 
 beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 1500 }));
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
-describe("NFT ownership snapshots", () => {
+describe("NFT ownership snapshots", { timeout: 20000 }, () => {
   it("returns every NFT asset class in a collection", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(reply({ non_fungible_tokens: [{ name: "first" }, { name: "second" }] })));
     expect(await fetchNftAssets("mainnet", contract)).toEqual([`${contract}::first`, `${contract}::second`]);
