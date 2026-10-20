@@ -3,11 +3,34 @@ import { HIRO, isAddressForNet, type Net } from "@/lib/stacks";
 export type NftHolder = { address: string; balance: bigint };
 const PAGE_SIZE = 200;
 export const MAX_NFT_SNAPSHOT = 5000;
+let nextRequestAt = 0;
+
+async function paceRequest() {
+  const now = Date.now();
+  const slot = Math.max(now, nextRequestAt);
+  nextRequestAt = slot + 1500;
+  if (slot > now) await new Promise((resolve) => setTimeout(resolve, slot - now));
+}
 
 async function read<T>(net: Net, path: string): Promise<T> {
-  const response = await fetch(HIRO[net] + path, { signal: AbortSignal.timeout(30000) });
-  if (!response.ok) throw new Error(`NFT data unavailable (${response.status}). Please retry shortly.`);
-  return response.json() as Promise<T>;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await paceRequest();
+    let response: Response;
+    try {
+      response = await fetch(HIRO[net] + path, { signal: AbortSignal.timeout(30000) });
+    } catch {
+      throw new Error("NFT data service could not be reached. Please wait a minute and retry; no partial snapshot was imported.");
+    }
+    if (response.status === 429 && attempt < 2) {
+      const seconds = Number(response.headers.get("retry-after"));
+      const wait = Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 60) : 15;
+      nextRequestAt = Math.max(nextRequestAt, Date.now() + wait * 1000);
+      continue;
+    }
+    if (!response.ok) throw new Error(`NFT data unavailable (${response.status}). Please retry shortly.`);
+    return response.json() as Promise<T>;
+  }
+  throw new Error("NFT data service is busy. Please retry shortly.");
 }
 
 export async function fetchNftAssets(net: Net, contract: string): Promise<string[]> {

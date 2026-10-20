@@ -8,7 +8,8 @@
 - [x] AI-assisted CSV column detection
 - [x] Separate testnet STX deployment and three-recipient wallet test page
 - [ ] Real three-person testnet transaction (requires wallet approvals, three testnet recipients and amounts)
-- [ ] NFT holder snapshots: collection selection, unique owners, equal/proportional allocation and review
+- [x] NFT holder snapshots: collection selection, unique owners, equal/proportional allocation and review
+- [ ] Live NFT snapshot verification (blocked by Hiro public API rate limits; controlled-data review flow passes)
 - [ ] Recipient airdrop checker
 - [ ] Claim page (pull airdrop via Merkle proofs)
 - [ ] Shared on-chain history (needs Cloud)

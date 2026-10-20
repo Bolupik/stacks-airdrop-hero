@@ -60,7 +60,7 @@ export function NftSnapshotForm({ net, sender, token, onDone, onBack }: {
       </div></fieldset>
       <label className="space-y-1.5 text-sm"><span className="eyebrow">{distribution === "equal" ? `${token.symbol} per wallet` : `Total ${token.symbol} pool`}</span><input className="field w-full" inputMode="decimal" value={amount} disabled={busy} onChange={(event) => setAmount(event.target.value)} /></label>
       <label className="space-y-1.5 text-sm"><span className="eyebrow">Minimum NFTs held (optional)</span><input className="field w-full" inputMode="numeric" placeholder="0" value={minimum} disabled={busy} onChange={(event) => setMinimum(event.target.value)} /></label>
-      <p className="text-xs text-muted-foreground self-end">Current indexed owners. Contract-held NFTs and your wallet are excluded. Maximum 5,000 mint events per asset.</p>
+      <p className="text-xs text-muted-foreground self-end">Current indexed owners. Contract-held NFTs and your wallet are excluded. Maximum 5,000 mint events per asset. Large snapshots can take several minutes.</p>
     </div>
     {distribution === "proportional" && <p className="text-xs text-muted-foreground">Rounded down to {token.symbol} base units; the remainder stays in your wallet.</p>}
     <p className="text-xs text-muted-foreground">Ownership can change while the snapshot is collected. Escrowed and staked NFTs are not attributed to their depositors.</p>
