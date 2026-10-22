@@ -39,7 +39,7 @@ function HistoryPage() {
       </div>
       {items === null ? null : items.length === 0 ? (
         <div className="panel p-6 text-muted-foreground">
-          No airdrops yet. <Link to="/" className="text-accent underline">Start one</Link>.
+          No airdrops yet. <Link to="/app" className="text-accent underline">Start one</Link>.
         </div>
       ) : (
         items.map((c) => (

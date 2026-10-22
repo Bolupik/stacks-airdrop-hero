@@ -112,7 +112,7 @@ function StxTestPage() {
       <p className="eyebrow">Testnet only · STX</p>
       <h1 className="text-4xl font-semibold">Three-person STX test</h1>
       <p className="text-sm text-muted-foreground">Uses testnet STX, not real funds. Both transactions require your wallet approval.</p>
-      <Link to="/" className="text-accent underline text-sm">Return to mainnet airdrops</Link>
+      <Link to="/app" className="text-accent underline text-sm">Return to mainnet airdrops</Link>
     </section>
     <section className="space-y-4 border-t border-border pt-6">
       <h2 className="text-2xl">1 · Testnet wallet</h2>
