@@ -52,6 +52,11 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
   --color-success: var(--success);
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-paper-card: var(--paper-card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
   --font-display: "Fraunces", Georgia, serif;
   --font-sans: "Manrope", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -102,6 +107,12 @@
   --sidebar-ring: oklch(0.64 0.2 32);
   --gradient-ribbon: linear-gradient(120deg, oklch(0.64 0.2 32), oklch(0.75 0.17 55) 55%, oklch(0.82 0.13 82));
   --shadow-glow: 0 20px 60px -20px oklch(0.64 0.2 32 / 0.55);
+  /* Landing "gift workshop" palette — warm paper, deep ink, same ribbon accent */
+  --paper: oklch(0.965 0.02 85);
+  --paper-deep: oklch(0.925 0.035 85);
+  --paper-card: oklch(0.945 0.028 85);
+  --ink: oklch(0.24 0.04 45);
+  --ink-soft: oklch(0.42 0.045 50);
 }
 
 @layer base {

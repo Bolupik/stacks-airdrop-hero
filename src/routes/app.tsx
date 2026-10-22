@@ -32,7 +32,7 @@ import {
   type TokenInfo,
 } from "@/lib/stacks";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
       { title: "Geschenk — Batch airdrop SIP-010 tokens on Stacks" },

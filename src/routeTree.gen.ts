@@ -9,13 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as StxTestRouteImport } from './routes/stx-test'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -30,42 +30,42 @@ const StxTestRoute = StxTestRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/history': typeof HistoryRoute
   '/stx-test': typeof StxTestRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/history': typeof HistoryRoute
   '/stx-test': typeof StxTestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/history': typeof HistoryRoute
   '/stx-test': typeof StxTestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history' | '/stx-test'
+  fullPaths: '/app' | '/history' | '/stx-test'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/stx-test'
-  id: '__root__' | '/' | '/history' | '/stx-test'
+  to: '/app' | '/history' | '/stx-test'
+  id: '__root__' | '/app' | '/history' | '/stx-test'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRoute
   HistoryRoute: typeof HistoryRoute
   StxTestRoute: typeof StxTestRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -86,7 +86,7 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRoute,
   HistoryRoute: HistoryRoute,
   StxTestRoute: StxTestRoute,
 }

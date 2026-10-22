@@ -11,7 +11,7 @@ export function SiteHeader() {
           Geschenk<span className="text-primary">.</span>
         </Link>
         <nav className="flex gap-1">
-          <Link to="/" className="tab" activeProps={{ "data-active": "true" } as never} activeOptions={{ exact: true }}>
+          <Link to="/app" className="tab" activeProps={{ "data-active": "true" } as never} activeOptions={{ exact: true }}>
             Airdrop
           </Link>
           <Link to="/history" className="tab" activeProps={{ "data-active": "true" } as never}>

@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -121,13 +122,14 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <WalletProvider>
-        <SiteHeader />
-        <main className="mx-auto max-w-5xl px-4 pb-24 pt-8">
+        {pathname === "/" ? null : <SiteHeader />}
+        <main className={pathname === "/" ? "" : "mx-auto max-w-5xl px-4 pb-24 pt-8"}>
           <Outlet />
         </main>
       </WalletProvider>
